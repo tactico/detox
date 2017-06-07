@@ -8,6 +8,11 @@ env:
   global:
   - NODE_VERSION=stable
 
+cache:
+  directories:
+    - $HOME/Library/Caches/Homebrew
+    - $HOME/build/wix/detox
+
 install:
 - brew install yarn
 
