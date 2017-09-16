@@ -1,17 +1,22 @@
 
 const _ = require('lodash');
+const mockListResult = require('./Fbsimctl.mock').list;
 
 describe('Fbsimctl', () => {
   let Fbsimctl;
   let fbsimctl;
   let exec;
   let fs;
+  let nodeSimctl;
 
-  const simUdid = `9C9ABE4D-70C7-49DC-A396-3CB1D0E82846`;
+  const simUdid = `9397C030-0556-4537-8538-99B6C1FC9048`;
   const bundleId = 'bundle.id';
 
   beforeEach(() => {
     jest.mock('npmlog');
+    jest.mock('node-simctl');
+    nodeSimctl = require('node-simctl');
+    nodeSimctl.getDevices.mockReturnValue(Promise.resolve(mockListResult));
     jest.mock('fs');
     fs = require('fs');
     jest.mock('../utils/exec');
@@ -23,42 +28,47 @@ describe('Fbsimctl', () => {
     fbsimctl = new Fbsimctl();
   });
 
-  it(`list() - specify a valid simulator should return that simulator's UDID`, async() => {
-    const result = returnSuccessfulWithValue(listAsimUdidAtState(simUdid, "Shutdown"));
-    exec.mockReturnValue(Promise.resolve(result));
+  // it(`list() - specify a valid simulator should return that simulator's UDID`, async () => {
+  //   expect(await fbsimctl.list('iPhone 7')).toEqual(simUdid);
+  //   expect(nodeSimctl.getDevices).toHaveBeenCalled();
+  // });
 
-    expect(await fbsimctl.list('iPhone 7')).toEqual(simUdid);
-  });
+  // it(`list() - specify a valid simulator should return that simulator's UDID`, async() => {
+  //   const result = returnSuccessfulWithValue(listAsimUdidAtState(simUdid, "Shutdown"));
+  //   exec.mockReturnValue(Promise.resolve(result));
 
-  it(`list() - specify an invalid simulator should throw an Error`, async() => {
-    const returnValue = {};
-    const result = returnSuccessfulWithValue(returnValue);
-    exec.mockReturnValue(Promise.resolve(result));
+  //   expect(await fbsimctl.list('iPhone 7')).toEqual(simUdid);
+  // });
 
-    try {
-      await fbsimctl.list('iPhone 7');
-      fail('expected list() to throw');
-    } catch (object) {
-      expect(object).toBeDefined();
-    }
-  });
+  // it(`list() - specify an invalid simulator should throw an Error`, async() => {
+  //   const returnValue = {};
+  //   const result = returnSuccessfulWithValue(returnValue);
+  //   exec.mockReturnValue(Promise.resolve(result));
 
-  it(`list() - when something goes wrong in the list retrival process, log the given error error`, async() => {
-    const returnValue = {};
-    const result = returnErrorWithValue(returnValue);
-    exec.mockReturnValue(Promise.reject(result));
+  //   try {
+  //     await fbsimctl.list('iPhone 7');
+  //     fail('expected list() to throw');
+  //   } catch (object) {
+  //     expect(object).toBeDefined();
+  //   }
+  // });
 
-    try {
-      await fbsimctl.list('iPhone 7');
-      fail('expected list() to throw');
-    } catch (object) {
-      expect(object).toBeDefined();
-    }
-  });
+  // it(`list() - when something goes wrong in the list retrival process, log the given error error`, async() => {
+  //   const returnValue = {};
+  //   const result = returnErrorWithValue(returnValue);
+  //   exec.mockReturnValue(Promise.reject(result));
 
-  it(`boot() - when shutting down, should wait for the device`, async() => {
-    fbsimctl._execFbsimctlCommand = jest.fn(() => ({stdout: `{"subject": {"state": "Shutting Down"}}`}));
-    
+  //   try {
+  //     await fbsimctl.list('iPhone 7');
+  //     fail('expected list() to throw');
+  //   } catch (object) {
+  //     expect(object).toBeDefined();
+  //   }
+  // });
+
+  it(`boot() - when shutting down, should wait for the device`, async () => {
+    fbsimctl._execFbsimctlCommand = jest.fn(() => ({ stdout: `{"subject": {"state": "Shutting Down"}}` }));
+
     try {
       await fbsimctl.boot(simUdid);
       fail('should throw');
@@ -67,9 +77,9 @@ describe('Fbsimctl', () => {
     }
   });
 
-  it(`boot() - when state is undefined, should wait for the device`, async() => {
+  it(`boot() - when state is undefined, should wait for the device`, async () => {
     fbsimctl._execFbsimctlCommand = jest.fn(() => ({}));
-    
+
     try {
       await fbsimctl.boot(simUdid);
       fail('should throw');
@@ -78,47 +88,47 @@ describe('Fbsimctl', () => {
     }
   });
 
-  it(`boot() - when booted, should not wait for the device to boot`, async() => {
-    fbsimctl._execFbsimctlCommand = jest.fn(() => ({stdout: `{"subject": {"state": "Booted"}}`}));
+  it(`boot() - when booted, should not wait for the device to boot`, async () => {
+    fbsimctl._execFbsimctlCommand = jest.fn(() => ({ stdout: `{"subject": {"state": "Booted"}}` }));
     await fbsimctl.boot(simUdid);
     expect(exec).toHaveBeenCalledTimes(0);
   });
 
-  it(`boot() - when booting, should not call exec`, async() => {
-    fbsimctl._execFbsimctlCommand = jest.fn(() => ({stdout: `{"subject": {"state": "Booting"}}`}));
+  it(`boot() - when booting, should not call exec`, async () => {
+    fbsimctl._execFbsimctlCommand = jest.fn(() => ({ stdout: `{"subject": {"state": "Booting"}}` }));
     await fbsimctl.boot(simUdid);
     expect(exec).toHaveBeenCalledTimes(0);
   });
 
-  it(`boot() - when shutdown, should call exec`, async() => {
-    fbsimctl._execFbsimctlCommand = jest.fn(() => ({stdout: `{"subject": {"state": "Shutdown"}}`}));
+  it(`boot() - when shutdown, should call exec`, async () => {
+    fbsimctl._execFbsimctlCommand = jest.fn(() => ({ stdout: `{"subject": {"state": "Shutdown"}}` }));
     await fbsimctl.boot(simUdid);
     expect(exec).toHaveBeenCalledTimes(1);
   });
 
-  it(`install() - is triggering fbsimctl install`, async() => {
+  it(`install() - is triggering fbsimctl install`, async () => {
     await validateFbsimctlisCalledOn(fbsimctl, async () => fbsimctl.install(simUdid, bundleId, {}));
   });
 
-  it(`uninstall() - is triggering fbsimctl uninstall`, async() => {
+  it(`uninstall() - is triggering fbsimctl uninstall`, async () => {
     await validateFbsimctlisCalledOn(fbsimctl, async () => fbsimctl.uninstall(simUdid, bundleId));
   });
 
-  it(`launch() - is triggering exec`, async() => {
+  it(`launch() - is triggering exec`, async () => {
     fs.existsSync.mockReturnValue(true);
-    exec.mockReturnValue({stdout: "appId: 22 \n"});
+    exec.mockReturnValue({ stdout: "appId: 22 \n" });
     await fbsimctl.launch(simUdid, bundleId, []);
     expect(exec).toHaveBeenCalledTimes(1);
   });
 
-  it(`launch() - is triggering exec with custom launch args`, async() => {
+  it(`launch() - is triggering exec with custom launch args`, async () => {
     fs.existsSync.mockReturnValue(true);
-    exec.mockReturnValue({stdout: "appId: 22 \n"});
-    await fbsimctl.launch(simUdid, bundleId, [{param: "param1"}]);
+    exec.mockReturnValue({ stdout: "appId: 22 \n" });
+    await fbsimctl.launch(simUdid, bundleId, [{ param: "param1" }]);
     expect(exec).toHaveBeenCalledTimes(1);
   });
 
-  it(`launch() - should throw when no Detox.framework exists`, async() => {
+  it(`launch() - should throw when no Detox.framework exists`, async () => {
     fs.existsSync.mockReturnValue(false);
     try {
       await fbsimctl.launch(simUdid, bundleId, []);
@@ -128,27 +138,27 @@ describe('Fbsimctl', () => {
     }
   });
 
-  it(`sendToHome() - is triggering exec`, async() => {
+  it(`sendToHome() - is triggering exec`, async () => {
     fs.existsSync.mockReturnValue(true);
-    exec.mockReturnValue({stdout: "appId: 22 \n"});
+    exec.mockReturnValue({ stdout: "appId: 22 \n" });
     await fbsimctl.sendToHome(simUdid, bundleId, []);
     expect(exec).toHaveBeenCalledTimes(1);
   });
 
-  it(`terminate() - is triggering exec`, async() => {
+  it(`terminate() - is triggering exec`, async () => {
     await fbsimctl.terminate(simUdid, bundleId);
     expect(exec).toHaveBeenCalledTimes(1);
   });
 
-  it(`shutdown() - is triggering fbsimctl shutdown`, async() => {
+  it(`shutdown() - is triggering fbsimctl shutdown`, async () => {
     await validateFbsimctlisCalledOn(fbsimctl, async () => fbsimctl.shutdown(simUdid));
   });
 
-  it(`open() - is triggering fbsimctl open`, async() => {
+  it(`open() - is triggering fbsimctl open`, async () => {
     await validateFbsimctlisCalledOn(fbsimctl, async () => fbsimctl.open(simUdid, bundleId));
   });
 
-  it(`isDeviceBooted() - specify a shutdown simulator`, async() => {
+  it(`isDeviceBooted() - specify a shutdown simulator`, async () => {
     fbsimctl._execFbsimctlCommand = jest.fn(() => {
       return returnSuccessfulWithValue(listAsimUdidAtState(simUdid, `Shutdown`));
     });
@@ -156,7 +166,7 @@ describe('Fbsimctl', () => {
     expect(isDeviceBooted).toBe(true);
   });
 
-  it(`isDeviceBooted() - specify a booted simulator`, async() => {
+  it(`isDeviceBooted() - specify a booted simulator`, async () => {
     fbsimctl._execFbsimctlCommand = jest.fn(() => {
       return returnSuccessfulWithValue(listAsimUdidAtState(simUdid, `Booted`));
     });
@@ -164,13 +174,13 @@ describe('Fbsimctl', () => {
     expect(isDeviceBooted).toBe(false);
   });
 
-  it(`setLocation() - is triggering fbsimctl set_location`, async() => {
+  it(`setLocation() - is triggering fbsimctl set_location`, async () => {
     await validateFbsimctlisCalledOn(fbsimctl, async () => fbsimctl.setLocation(simUdid));
   });
 
-  it(`resetContentAndSettings() - is triggering shutdown, exec and boot`, async() => {
+  it(`resetContentAndSettings() - is triggering shutdown, exec and boot`, async () => {
     fs.existsSync.mockReturnValue(true);
-    exec.mockReturnValue({stdout: "appId: 22 \n"});
+    exec.mockReturnValue({ stdout: "appId: 22 \n" });
     fbsimctl.shutdown = jest.fn();
     fbsimctl.boot = jest.fn();
     await fbsimctl.resetContentAndSettings(simUdid);
@@ -179,18 +189,18 @@ describe('Fbsimctl', () => {
     expect(fbsimctl.boot).toHaveBeenCalledTimes(1);
   });
 
-  it(`exec simulator command successfully`, async() => {
+  it(`exec simulator command successfully`, async () => {
     const result = returnSuccessfulWithValue("");
     exec.mockReturnValue(Promise.resolve(result));
-    const options = {args: `an argument`};
+    const options = { args: `an argument` };
     expect(await fbsimctl._execFbsimctlCommand(options)).toEqual(result);
   });
 
-  it(`exec simulator command with error`, async() => {
+  it(`exec simulator command with error`, async () => {
     const errorResult = returnErrorWithValue('');
     exec.mockReturnValue(Promise.reject(errorResult));
-    const options = {args: `an argument`};
-    
+    const options = { args: `an argument` };
+
     try {
       await fbsimctl._execFbsimctlCommand(options, '', 10, 1);
     } catch (object) {
@@ -198,13 +208,13 @@ describe('Fbsimctl', () => {
     }
   });
 
-  it(`exec simulator command with multiple errors and then a success`, async() => {
+  it(`exec simulator command with multiple errors and then a success`, async () => {
     const successfulResult = returnSuccessfulWithValue('successful result');
     const resolvedPromise = Promise.resolve(successfulResult);
 
     exec.mockReturnValueOnce(resolvedPromise);
-  
-    const options = {args: `an argument`};
+
+    const options = { args: `an argument` };
     expect(await fbsimctl._execFbsimctlCommand(options, '', 10, 1)).toEqual(successfulResult);
   });
 
